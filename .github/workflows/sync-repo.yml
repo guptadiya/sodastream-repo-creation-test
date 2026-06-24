@@ -1,0 +1,56 @@
+name: Sync Repository To Org B
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ secrets.TARGET_ORG }}
+
+      - name: Create Repository If Missing
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_ORG: ${{ secrets.TARGET_ORG }}
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          echo "Checking $TARGET_ORG/$REPO_NAME"
+          if gh api repos/$TARGET_ORG/$REPO_NAME >/dev/null 2>&1; then
+            echo "Repository exists"
+          else
+            echo "Creating repository"
+            gh api \
+              --method POST \
+              /orgs/$TARGET_ORG/repos \
+              -f name="$REPO_NAME" \
+              -f private=true
+          fi
+      - name: Push Main Branch
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_ORG: ${{ secrets.TARGET_ORG }}
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          git config user.name "github-app"
+          git config user.email "github-app@users.noreply.github.com"
+          git remote add target \
+          https://x-access-token:${TOKEN}@github.com/${TARGET_ORG}/${REPO_NAME}.git
+          git push target main:main --force
