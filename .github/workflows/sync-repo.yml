@@ -41,7 +41,8 @@ jobs:
               --method POST \
               /orgs/$TARGET_ORG/repos \
               -f name="$REPO_NAME" \
-              -f private=true
+              -f private=true \
+              -f visibility=private
           fi
       - name: Push Main Branch
         env:
