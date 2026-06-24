@@ -45,6 +45,9 @@ jobs:
               -f private=true \
               -f visibility=private
           fi
+      - name: Remove sync workflow
+        run: |
+          rm -f .github/workflows/sync-repo.yml
       - name: Push Main Branch
         env:
           TOKEN: ${{ steps.app-token.outputs.token }}
